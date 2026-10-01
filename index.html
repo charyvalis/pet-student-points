@@ -32,7 +32,7 @@ input,select{background:var(--bg);color:var(--tx);border:1px solid var(--bd);bor
 .pos{color:#2e9d6b;font-weight:700}.neg{color:#d9534f;font-weight:700}
 .big{font-size:64px;text-align:center;font-variant-numeric:tabular-nums}
 .nav{margin-bottom:6px}
-textarea{width:100%;margin-top:8px;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:8px;font-size:15px}table{width:100%;border-collapse:collapse}td{padding:6px 4px;border-bottom:1px solid var(--bd)}</style></head><body>
+textarea{width:100%;margin-top:8px;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:8px;font-size:15px}table{width:100%;border-collapse:collapse}td{padding:6px 4px;border-bottom:1px solid var(--bd)}</style><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script></head><body>
 <h1>🌱 班級點數</h1><div class="sub">小小的行動，讓班級更美好！<span id="stat"></span></div>
 <div id="app"></div>
 <script>
@@ -53,7 +53,7 @@ if(S.gv!=2){S.stu.forEach(s=>s.g=0);S.gv=2}
 let view="home",timer=null;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const save=()=>{try{localStorage.setItem("cp2",JSON.stringify(S))}catch(e){}push()};
+const save=()=>{try{localStorage.setItem("cp2",JSON.stringify(S));localStorage.setItem("cpd","1")}catch(e){}push()};
 const mk=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")};
 const tm=()=>new Date().toTimeString().slice(0,5);
 const ss=()=>S.stu.slice().sort((a,b)=>a.no-b.no);
@@ -133,10 +133,10 @@ window.delOne=id=>{const s=S.stu.find(x=>x.id==id);if(s&&confirm("刪除 "+s.no+
 window.buy=i=>{const [n,c]=S.shop[i];if(!S.sel.length)return alert("請先選擇學生");S.sel.forEach(id=>{const s=S.stu.find(x=>x.id==id);if(s&&bal(s)>=c){s.spent=(s.spent||0)+c;S.log.unshift({id:s.id,n:s.name,no:s.no,d:-c,w:"兌換"+n,c:"兌換",t:tm(),m:mk()})}else if(s)alert(s.name+" 分數不足")});save();render()};
 window.roll=()=>{if(!S.stu.length)return;let k=0,el=$("pick"),iv=setInterval(()=>{const s=S.stu[Math.random()*S.stu.length|0];el.textContent=pet(s)+" "+s.no+" "+s.name;if(++k>14){clearInterval(iv);S.sel=[s.id];save()}},80)};
 window.tstart=()=>{clearInterval(timer);let t=(parseInt($("min").value)||5)*60;const f=()=>{$("clk").textContent=String(t/60|0).padStart(2,"0")+":"+String(t%60).padStart(2,"0");if(t--<=0){clearInterval(timer);$("clk").textContent="⏰ 時間到！"}};f();timer=setInterval(f,1000)};
-let DBd=null,canW=false,ready=false,stuMode=location.hash=="#s",sync="💾 僅本機",pt=null,last="",me=0,QU="https://claude.ai/artifact/2mZK4SvVVKkU3RbFnniqZW";
+let DBd=null,canW=false,ready=false,stuMode=/^#s/.test(location.hash),sync="💾 僅本機",pt=null,last="",me=0,QU="https://claude.ai/artifact/2mZK4SvVVKkU3RbFnniqZW";
 try{me=+localStorage.getItem("cpme")||0}catch(e){}
 const stat=()=>{const e=$("stat");if(e)e.textContent=sync};
-function push(){if(!DBd||!canW)return;clearTimeout(pt);pt=setTimeout(async()=>{try{last=JSON.stringify(Object.assign({},S,{sel:[],log:S.log.slice(0,1500)}));await DBd.set({json:last,t:Date.now()});sync="☁️ 已同步"}catch(e){sync="⚠️ 同步失敗"}stat()},600)}
+function push(){if(!DBd||!canW)return;clearTimeout(pt);pt=setTimeout(async()=>{try{last=JSON.stringify(Object.assign({},S,{sel:[],log:S.log.slice(0,1500)}));const r=await DBd.set({json:last});try{localStorage.setItem("cpd","0");localStorage.setItem("cpt",r.t)}catch(e){}sync="☁️ 已同步 "+tm()}catch(e){sync="⚠️ 同步失敗"}stat()},600)}
 function adopt(j){try{const sel=S.sel;S=Object.assign(S,JSON.parse(j));S.sel=canW?sel.filter(id=>S.stu.some(s=>s.id==id)):[]}catch(e){}}
 window.mv=n=>{if(!S.sel.length)return alert("請先點選學生");S.stu.forEach(s=>{if(S.sel.includes(s.id))s.g=n});S.sel=[];save();render()};
 const shuf=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
@@ -160,5 +160,29 @@ const allc=ITEMS.flatMap(g=>g[3].map(x=>x[0]));
 window.expSum=()=>dl("班級成績_"+mk()+".csv",[["座號","姓名","累積分數","已兌換","餘額","寵物","階段","本月警告(支)"].concat(allc.map(c=>"本月"+c+"次數"))].concat(ss().map(s=>[s.no,s.name,s.pts,s.spent||0,bal(s),SP[spi(s)][0],STAGES[stage(s)],warn(s)].concat(allc.map(c=>cnt(s.id,c))))));
 window.expLog=()=>dl("加減分紀錄_"+mk()+".csv",[["月份","時間","座號","姓名","代號","事項","分數"]].concat(S.log.map(l=>[l.m||"",l.t,l.no||"",l.n,l.c||"",l.w,l.d])));
 window.imp=inp=>{const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const o=JSON.parse(r.result);if(!o.stu)throw 0;if(!confirm("匯入會取代目前資料，確定？"))return;S=Object.assign(S,o);S.sel=[];save();render();alert("匯入完成")}catch(e){alert("備份檔格式不正確")}};r.readAsText(f)};
-canW=true;ready=true;sync="💾 資料存在此裝置";document.addEventListener("click",e=>{if(MN&&!e.target.closest(".menu")){MN=0;render()}});render();stat();
+const API="https://pet-sync.charyvalis.workers.dev";
+const lg=k=>{try{return localStorage.getItem(k)}catch(e){return null}},ls=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+let TK=lg("cptk")||"";
+const VKEY=()=>decodeURIComponent(location.hash.replace(/^#s=?/,""));
+async function pull(){const r=await fetch(API+"/state?"+(stuMode?"v="+encodeURIComponent(VKEY()):"k="+encodeURIComponent(TK)));if(r.status==403)throw "403";if(!r.ok)throw r.status;return r.json()}
+async function initSync(){
+ if(stuMode){
+  const go=async()=>{try{const j=await pull();if(j.json){adopt(j.json);sync="☁️ 已更新 "+tm()}else sync="老師尚未上傳資料"}catch(e){sync=e=="403"?"⚠️ 連結不正確，請重新掃描老師的 QR Code":"⚠️ 無法連線，請檢查網路"}render();stat()};
+  go();setInterval(go,20000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)go()});return}
+ if(!TK){TK=prompt("請輸入老師密碼（只需輸入一次）")||"";if(!TK){sync="💾 僅本機（未輸入老師密碼，不會同步）";stat();return}ls("cptk",TK)}
+ DBd={set:async v=>{const r=await fetch(API+"/state",{method:"POST",body:JSON.stringify({k:TK,json:v.json})});if(r.status==403){ls("cptk","");TK="";throw 0}if(!r.ok)throw 0;return r.json()}};
+ try{
+  const j=await pull();
+  if(j.view)QU=location.href.split("#")[0]+"#s="+encodeURIComponent(j.view);
+  const dirty=lg("cpd")=="1",t0=+lg("cpt")||0,R=j.json?JSON.parse(j.json):null,rn=R&&R.stu?R.stu.length:0,ln=S.stu.length;
+  if(!j.json){if(ln){sync="☁️ 同步中…";push()}else sync="☁️ 已連線（雲端尚無資料）"}
+  else if(dirty){sync="☁️ 同步中…";push()}
+  else if(j.t>t0){
+   if(t0==0&&ln&&!rn){sync="☁️ 同步中…";push()}
+   else if(t0==0&&ln&&rn&&!confirm("雲端已有資料（"+rn+" 位學生），此裝置也有資料（"+ln+" 位）。\n按「確定」使用雲端資料；按「取消」用此裝置的資料覆蓋雲端。")){sync="☁️ 同步中…";push()}
+   else{adopt(j.json);ls("cp2",JSON.stringify(S));ls("cpt",j.t);sync="☁️ 已同步（已載入雲端資料）";render()}}
+  else sync="☁️ 已同步"
+ }catch(e){if(e=="403"){ls("cptk","");TK="";sync="⚠️ 老師密碼不正確，重新整理後再輸入"}else sync="⚠️ 無法連線雲端（資料先存在此裝置）"}
+ stat()}
+canW=!stuMode;ready=true;sync=stuMode?"☁️ 載入中…":"💾 僅本機";document.addEventListener("click",e=>{if(MN&&!e.target.closest(".menu")){MN=0;render()}});render();stat();initSync();
 </script></body></html>
